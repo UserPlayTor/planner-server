@@ -24,7 +24,7 @@ import { WebSocketServer } from 'ws';
 import express from 'express';
 import cors from 'cors';
 import { nanoid } from 'nanoid';
-import RoomManager from './room-manager.js';
+import RoomManager from './test-room-manager.js';
 
 const PORT = process.env.PORT || 3000;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
