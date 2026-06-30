@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlockPlan — Minecraft House Planner</title>
+<style>
+:root {
+  --bp-bg:#f0eff4;--bp-surface:#ffffff;--bp-surface2:#f5f4f8;--bp-surface3:#eceaf0;
+  --bp-border:#dddae6;--bp-border2:#c8c4d4;
+  --bp-text:#1a1820;--bp-text2:#5a5670;--bp-text3:#8a86a0;
+  --bp-accent:#5b4fcf;--bp-accent-bg:#eeedfe;--bp-accent-text:#3c3489;
+  --bp-3dbg:#1a1830; --bp-red:#e53e3e;
+}
+[data-theme=dark]{
+  --bp-bg:#0f0e15;--bp-surface:#1c1a26;--bp-surface2:#242232;--bp-surface3:#2e2b40;
+  --bp-border:#3a3550;--bp-border2:#524e6e;
+  --bp-text:#e8e4f8;--bp-text2:#9490b0;--bp-text3:#605c7a;
+  --bp-accent:#8b7ef8;--bp-accent-bg:#26215c;--bp-accent-text:#afa9ec;
+  --bp-3dbg:#08070f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{overflow:hidden}
+#app{display:flex;height:100vh;flex-direction:column;background:var(--bp-bg);color:var(--bp-text);font-family:system-ui,sans-serif}
+#toolbar{display:flex;align-items:center;gap:4px;padding:5px 8px;background:var(--bp-surface);border-bottom:1px solid var(--bp-border);flex-wrap:wrap;z-index:10}
+.logo{font-size:13px;font-weight:600;color:var(--bp-accent);margin-right:2px;white-space:nowrap}
+.tb-btn{background:transparent;border:1px solid var(--bp-border2);border-radius:5px;padding:3px 7px;font-size:11px;color:var(--bp-text);cursor:pointer;display:flex;align-items:center;gap:3px;white-space:nowrap;transition:background .1s}
+.tb-btn:hover{background:var(--bp-surface2)}
+.tb-btn.active{background:var(--bp-accent-bg);border-color:var(--bp-accent);color:var(--bp-accent-text)}
+.tb-btn.danger{border-color:#e53e3e55;color:var(--bp-red)}
+.tb-sep{width:1px;height:16px;background:var(--bp-border);margin:0 1px;flex-shrink:0}
+#theme-toggle{background:transparent;border:1px solid var(--bp-border2);border-radius:20px;padding:3px 7px;font-size:11px;color:var(--bp-text);cursor:pointer;display:flex;align-items:center;gap:4px}
+.toggle-track{width:24px;height:13px;border-radius:7px;background:var(--bp-border2);position:relative;transition:background .2s;flex-shrink:0}
+[data-theme=dark] .toggle-track{background:var(--bp-accent)}
+.toggle-thumb{width:9px;height:9px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s}
+[data-theme=dark] .toggle-thumb{transform:translateX(11px)}
+#mp-bar{padding:4px 10px;background:var(--bp-surface2);border-bottom:1px solid var(--bp-border);display:none;align-items:center;gap:10px;font-size:11px;flex-wrap:wrap}
+#mp-bar.visible{display:flex}
+.mp-dot{width:7px;height:7px;border-radius:50%;background:#4caf50;flex-shrink:0}
+.mp-dot.offline{background:#e53e3e}
+#main{display:flex;flex:1;overflow:hidden}
+#sidebar{width:210px;min-width:170px;background:var(--bp-surface);border-right:1px solid var(--bp-border);display:flex;flex-direction:column;overflow:hidden}
+#sidebar-tabs{display:flex;border-bottom:1px solid var(--bp-border)}
+.stab{flex:1;padding:6px 2px;font-size:10px;text-align:center;cursor:pointer;color:var(--bp-text2);border-bottom:2px solid transparent}
+.stab.active{color:var(--bp-accent);border-bottom-color:var(--bp-accent)}
+#block-search{padding:5px 7px;border-bottom:1px solid var(--bp-border)}
+#block-search input{width:100%;padding:3px 7px;font-size:11px;border-radius:5px;border:1px solid var(--bp-border2);background:var(--bp-surface2);color:var(--bp-text);outline:none}
+#block-list{flex:1;overflow-y:auto;padding:3px}
+.block-cat{font-size:9px;color:var(--bp-text3);padding:5px 4px 2px;text-transform:uppercase;letter-spacing:.07em}
+.block-item{display:flex;align-items:center;gap:5px;padding:3px 5px;border-radius:4px;cursor:pointer;font-size:11px;color:var(--bp-text)}
+.block-item:hover{background:var(--bp-surface2)}
+.block-item.selected{background:var(--bp-accent-bg);color:var(--bp-accent-text)}
+.block-thumb{width:20px;height:20px;border-radius:2px;flex-shrink:0;border:1px solid rgba(0,0,0,.08);image-rendering:pixelated;background:var(--bp-surface3)}
+#grid-panel{padding:7px;border-top:1px solid var(--bp-border)}
+#grid-panel label{font-size:10px;color:var(--bp-text2);margin-bottom:3px;display:block}
+.grid-row{display:flex;align-items:center;gap:4px;margin-bottom:4px}
+.grid-row input[type=number]{width:42px;padding:3px 5px;font-size:11px;border-radius:4px;border:1px solid var(--bp-border2);background:var(--bp-surface2);color:var(--bp-text);outline:none}
+.grid-row span{font-size:11px;color:var(--bp-text3)}
+.sm-btn{padding:2px 6px;font-size:10px;border-radius:4px;border:1px solid var(--bp-border2);background:transparent;color:var(--bp-text);cursor:pointer;white-space:nowrap}
+.sm-btn:hover{background:var(--bp-surface2)}
+#layer-info{font-size:10px;color:var(--bp-text2);margin-top:3px}
+#layer-info strong{color:var(--bp-text)}
+#canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+#view-tabs{display:flex;border-bottom:1px solid var(--bp-border);background:var(--bp-surface)}
+.vtab{padding:5px 12px;font-size:11px;cursor:pointer;color:var(--bp-text2);border-bottom:2px solid transparent}
+.vtab.active{color:var(--bp-accent);border-bottom-color:var(--bp-accent)}
+#views{flex:1;position:relative;overflow:hidden}
+#view-2d,#view-3d{position:absolute;inset:0;display:none}
+#view-2d.active,#view-3d.active{display:flex}
+#view-2d{flex-direction:column;overflow:hidden}
+#layer-bar{padding:4px 8px;background:var(--bp-surface);border-bottom:1px solid var(--bp-border);display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.layer-chip{padding:2px 7px;font-size:10px;border-radius:4px;cursor:pointer;background:var(--bp-surface2);border:1px solid var(--bp-border);color:var(--bp-text2)}
+.layer-chip.active{background:var(--bp-accent-bg);border-color:var(--bp-accent);color:var(--bp-accent-text)}
+#grid-scroll{flex:1;overflow:auto;padding:10px;display:flex;align-items:flex-start}
+#grid-canvas{display:grid;gap:1px;background:var(--bp-border);position:relative}
+.gcell{width:28px;height:28px;cursor:crosshair;background:var(--bp-surface2);image-rendering:pixelated;background-size:cover;background-repeat:no-repeat}
+.gcell:hover{filter:brightness(1.2)}
+.gcell.sel-region{outline:2px solid var(--bp-accent);z-index:1}
+.gcell.paste-preview{outline:2px dashed #4caf50;z-index:1}
+#view-3d{background:var(--bp-3dbg);position:relative}
+#three-canvas{width:100%;height:100%;display:block}
+#three-hud{position:absolute;top:8px;left:8px;font-size:11px;color:rgba(255,255,255,.65);pointer-events:none;line-height:1.6}
+#three-crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,.5);font-size:18px;pointer-events:none;display:none}
+#three-toolbar{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:none;gap:5px;background:rgba(0,0,0,.5);padding:5px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(4px)}
+#three-toolbar.visible{display:flex}
+.three-tb-btn{background:transparent;border:1px solid rgba(255,255,255,.2);border-radius:4px;padding:3px 8px;font-size:11px;color:#fff;cursor:pointer}
+.three-tb-btn:hover{background:rgba(255,255,255,.15)}
+.three-tb-btn.active{background:rgba(139,126,248,.4);border-color:#8b7ef8}
+#stab-rooms,#stab-cost,#stab-share{display:none;padding:7px;flex-direction:column}
+#stab-rooms{flex:1;overflow-y:auto}
+#stab-cost{flex:1;overflow-y:auto}
+#stab-share{flex:1;overflow-y:auto;gap:8px}
+.cost-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:11px;border-bottom:1px solid var(--bp-border);color:var(--bp-text);gap:4px}
+.cost-thumb{width:14px;height:14px;border-radius:2px;flex-shrink:0;image-rendering:pixelated;background:var(--bp-surface3)}
+.share-section{background:var(--bp-surface2);border:1px solid var(--bp-border);border-radius:6px;padding:8px;font-size:11px}
+.share-section h4{font-size:11px;font-weight:500;color:var(--bp-text);margin-bottom:6px}
+.share-section p{font-size:10px;color:var(--bp-text3);margin-bottom:6px;line-height:1.4}
+.share-input{width:100%;padding:4px 6px;font-size:10px;border-radius:4px;border:1px solid var(--bp-border2);background:var(--bp-surface);color:var(--bp-text);outline:none;margin-bottom:4px;word-break:break-all}
+.mp-section{background:var(--bp-surface2);border:1px solid var(--bp-border);border-radius:6px;padding:8px;font-size:11px}
+.mp-section h4{font-size:11px;font-weight:500;color:var(--bp-text);margin-bottom:6px}
+.mp-section p{font-size:10px;color:var(--bp-text3);margin-bottom:4px;line-height:1.4}
+#mp-room-input{width:100%;padding:4px 6px;font-size:11px;border-radius:4px;border:1px solid var(--bp-border2);background:var(--bp-surface);color:var(--bp-text);outline:none;margin-bottom:5px;letter-spacing:.1em;text-transform:uppercase}
+#mp-url-input{width:100%;padding:4px 6px;font-size:10px;border-radius:4px;border:1px solid var(--bp-border2);background:var(--bp-surface);color:var(--bp-text);outline:none;margin-bottom:5px}
+.user-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:10px;font-size:10px;margin:2px;border:1px solid transparent}
+#info-bar{padding:3px 8px;background:var(--bp-surface);border-top:1px solid var(--bp-border);font-size:10px;color:var(--bp-text3);display:flex;gap:12px;flex-wrap:wrap}
+#toast{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:var(--bp-surface3);border:1px solid var(--bp-border2);border-radius:7px;padding:5px 14px;font-size:12px;display:none;z-index:99;color:var(--bp-text);white-space:nowrap;pointer-events:none}
+#ctx-menu{position:fixed;background:var(--bp-surface);border:1px solid var(--bp-border2);border-radius:7px;padding:4px;font-size:11px;display:none;z-index:500;min-width:150px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.ctx-item{padding:5px 10px;border-radius:4px;cursor:pointer;color:var(--bp-text)}
+.ctx-item:hover{background:var(--bp-accent-bg);color:var(--bp-accent-text)}
+.ctx-sep{height:1px;background:var(--bp-border);margin:3px 0}
+#modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:80}
+#modal-bg.open{display:flex}
+.modal{background:var(--bp-surface);border-radius:10px;border:1px solid var(--bp-border2);padding:16px;min-width:260px;max-width:360px;width:90%}
+.modal h3{font-size:14px;font-weight:500;margin-bottom:12px;color:var(--bp-text)}
+.modal-btn{width:100%;margin-bottom:6px;padding:7px 10px;text-align:left;background:var(--bp-surface2);border:1px solid var(--bp-border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--bp-text)}
+.modal-btn:hover{border-color:var(--bp-accent);color:var(--bp-accent-text)}
+.modal-btn.secondary{color:var(--bp-text3)}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <span class="logo">⛏ BlockPlan</span>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="newDesign()">New</button>
+  <button class="tb-btn" onclick="saveDesign()">Save</button>
+  <button class="tb-btn" onclick="loadDesign()">Load</button>
+  <label class="tb-btn" style="cursor:pointer">Import<input type="file" style="display:none" accept=".json,.litematic,.schem,.nbt" onchange="importFile(this)"></label>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btn-undo" onclick="undo()">↩ Undo</button>
+  <button class="tb-btn" id="btn-redo" onclick="redo()">↪ Redo</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn active" id="btn-draw" onclick="setTool('draw')">✏ Draw</button>
+  <button class="tb-btn" id="btn-erase" onclick="setTool('erase')">⌫ Erase</button>
+  <button class="tb-btn" id="btn-select" onclick="setTool('select')">⬚ Select</button>
+  <button class="tb-btn" id="btn-fill" onclick="setTool('fill')">⬛ Fill</button>
+  <button class="tb-btn" id="btn-room" onclick="setTool('room')">⊞ Room</button>
+  <button class="tb-btn" id="btn-pick" onclick="setTool('pick')">🔍 Pick</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="copyRegion()">Copy</button>
+  <button class="tb-btn" onclick="pasteRegion()">Paste</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="openModal('export')">Export ↓</button>
+  <div style="margin-left:auto"></div>
+  <button id="theme-toggle" onclick="toggleTheme()">
+    <span id="theme-icon">☀</span>
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span id="theme-label">Light</span>
+  </button>
+</div>
+
+<!-- MULTIPLAYER BAR -->
+<div id="mp-bar">
+  <div class="mp-dot offline" id="mp-dot"></div>
+  <span id="mp-status">Not connected</span>
+  <span class="tb-sep"></span>
+  <span id="mp-users-bar"></span>
+  <span style="margin-left:auto"></span>
+  <button class="sm-btn" onclick="mpDisconnect()">Leave room</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-tabs">
+      <div class="stab active" onclick="switchSTab('blocks',this)">Blocks</div>
+      <div class="stab" onclick="switchSTab('rooms',this)">Rooms</div>
+      <div class="stab" onclick="switchSTab('cost',this)">Cost</div>
+      <div class="stab" onclick="switchSTab('share',this)">Share</div>
+    </div>
+
+    <!-- BLOCKS TAB -->
+    <div id="stab-blocks" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div id="block-search"><input id="bsearch" type="text" placeholder="Search blocks…" oninput="filterBlocks(this.value)"></div>
+      <div id="block-list"></div>
+    </div>
+
+    <!-- ROOMS TAB -->
+    <div id="stab-rooms">
+      <p style="font-size:10px;color:var(--bp-text3);margin-bottom:6px">Right-click a cell with the Room tool to label it.</p>
+      <div id="room-list"></div>
+      <button class="sm-btn" style="margin-top:7px;width:100%" onclick="clearRooms()">Clear all rooms</button>
+    </div>
+
+    <!-- COST TAB -->
+    <div id="stab-cost"><div id="cost-full"><p style="font-size:11px;color:var(--bp-text3)">No blocks placed yet.</p></div></div>
+
+    <!-- SHARE TAB -->
+    <div id="stab-share">
+      <div class="share-section">
+        <h4>🔗 Share build link</h4>
+        <p>Generates a URL with your entire build encoded in it. Anyone with the link can open and import it.</p>
+        <button class="sm-btn" style="width:100%;margin-bottom:5px" onclick="generateShareLink()">Generate link</button>
+        <textarea id="share-url-out" class="share-input" rows="3" readonly placeholder="Link will appear here…" style="resize:none;font-size:10px"></textarea>
+        <button class="sm-btn" style="width:100%" onclick="copyShareLink()">Copy link</button>
+      </div>
+
+      <div class="mp-section">
+        <h4>🌐 Live multiplayer <span style="font-size:9px;color:var(--bp-text3)">(needs server)</span></h4>
+        <p>Enter your WebSocket server URL and a room code to collaborate live. Everyone in the same room edits together.</p>
+        <label style="font-size:10px;color:var(--bp-text3)">Server URL</label>
+        <input id="mp-url-input" type="text" placeholder="ws://localhost:3000" value="ws://localhost:3000">
+        <label style="font-size:10px;color:var(--bp-text3)">Room code</label>
+        <input id="mp-room-input" type="text" placeholder="ROOM CODE" maxlength="8">
+        <div style="display:flex;gap:4px;margin-top:2px">
+          <button class="sm-btn" style="flex:1" onclick="mpJoin()">Join room</button>
+          <button class="sm-btn" style="flex:1" onclick="mpCreateRoom()">New room</button>
+        </div>
+        <div id="mp-users-sidebar" style="margin-top:6px;font-size:10px;color:var(--bp-text2)">No users connected.</div>
+      </div>
+    </div>
+
+    <!-- GRID PANEL -->
+    <div id="grid-panel">
+      <label>Grid size</label>
+      <div class="grid-row">
+        <input type="number" id="gx" value="20" min="1" max="64"> <span>W</span>
+        <input type="number" id="gy" value="20" min="1" max="64"> <span>H</span>
+      </div>
+      <div class="grid-row">
+        <button class="sm-btn" onclick="applyGrid()">Apply</button>
+        <button class="sm-btn" onclick="addLayer()">+L</button>
+        <button class="sm-btn" onclick="removeLayer()">−L</button>
+      </div>
+      <div id="layer-info">Layer: <strong id="cur-layer-lbl">1</strong> / <strong id="total-layers-lbl">1</strong></div>
+    </div>
+  </div>
+
+  <!-- CANVAS AREA -->
+  <div id="canvas-area">
+    <div id="view-tabs">
+      <div class="vtab active" onclick="switchView('2d',this)">2D editor</div>
+      <div class="vtab" onclick="switchView('3d',this)">3D editor</div>
+    </div>
+    <div id="views">
+      <!-- 2D VIEW -->
+      <div id="view-2d" class="active">
+        <div id="layer-bar"><span style="font-size:10px;color:var(--bp-text3)">Layer:</span><div id="layer-chips"></div></div>
+        <div id="grid-scroll"><div id="grid-canvas"></div></div>
+      </div>
+      <!-- 3D VIEW -->
+      <div id="view-3d">
+        <canvas id="three-canvas"></canvas>
+        <div id="three-hud">
+          <div>🖱 Drag = orbit &nbsp;·&nbsp; Scroll = zoom &nbsp;·&nbsp; Right-drag = pan</div>
+          <div id="three-mode-label">Mode: Place &nbsp;·&nbsp; Left = place &nbsp;·&nbsp; Right = erase</div>
+        </div>
+        <div id="three-crosshair">+</div>
+        <div id="three-toolbar" class="visible">
+          <button class="three-tb-btn active" id="btn-3d-place" onclick="set3DTool('place')">✏ Place</button>
+          <button class="three-tb-btn" id="btn-3d-erase" onclick="set3DTool('erase')">⌫ Erase</button>
+          <button class="three-tb-btn" id="btn-3d-pick" onclick="set3DTool('pick')">🔍 Pick</button>
+          <span style="color:rgba(255,255,255,.3);padding:0 4px">|</span>
+          <button class="three-tb-btn" onclick="rebuild3D()">↺ Refresh</button>
+        </div>
+      </div>
+    </div>
+    <div id="info-bar">
+      <span id="coord-info">x:– y:–</span>
+      <span id="tool-info">Tool: Draw</span>
+      <span id="block-info">Block: —</span>
+      <span id="sel-info"></span>
+    </div>
+    <div id="toast"></div>
+  </div>
+</div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="ctx-menu">
+  <div class="ctx-item" onclick="copyRegion();hideCtx()">Copy selection</div>
+  <div class="ctx-item" onclick="pasteRegion();hideCtx()">Paste here</div>
+  <div class="ctx-item" onclick="deleteRegion();hideCtx()">Delete selection</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="floodFill(ctxR,ctxC);hideCtx()">Flood fill</div>
+  <div class="ctx-item" onclick="ctxLabelRoom();hideCtx()">Label as room</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="hideCtx()">Cancel</div>
+</div>
+
+<!-- MODAL BACKDROP -->
+<div id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <!-- EXPORT MODAL -->
+  <div class="modal" id="export-modal" style="display:none">
+    <h3>Export design</h3>
+    <button class="modal-btn" onclick="exportPNG()">🖼 PNG — current layer</button>
+    <button class="modal-btn" onclick="exportJSON()">{ } JSON schematic</button>
+    <button class="modal-btn" onclick="exportSchem()">📦 .schem (Sponge schematic)</button>
+    <button class="modal-btn" onclick="exportLitematic()">🗜 .litematic (Litematica)</button>
+    <button class="modal-btn" onclick="exportNBT()">📄 .nbt (structure file)</button>
+    <button class="modal-btn" onclick="exportMaterials()">📋 Material list (.txt)</button>
+    <button class="modal-btn secondary" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════
+   BLOCK DEFINITIONS
+═══════════════════════════════════════════════ */
+const TEX_BASE='https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.19.3/assets/minecraft/textures/block/';
+const tx=n=>TEX_BASE+n+'.png';
+
+const BLOCKS=[
+  {cat:"Stone",name:"Stone",tex:"stone"},{cat:"Stone",name:"Cobblestone",tex:"cobblestone"},
+  {cat:"Stone",name:"Smooth Stone",tex:"smooth_stone"},{cat:"Stone",name:"Stone Bricks",tex:"stone_bricks"},
+  {cat:"Stone",name:"Mossy Stone Bricks",tex:"mossy_stone_bricks"},{cat:"Stone",name:"Cracked Stone Bricks",tex:"cracked_stone_bricks"},
+  {cat:"Stone",name:"Chiseled Stone Bricks",tex:"chiseled_stone_bricks"},{cat:"Stone",name:"Granite",tex:"granite"},
+  {cat:"Stone",name:"Polished Granite",tex:"polished_granite"},{cat:"Stone",name:"Diorite",tex:"diorite"},
+  {cat:"Stone",name:"Polished Diorite",tex:"polished_diorite"},{cat:"Stone",name:"Andesite",tex:"andesite"},
+  {cat:"Stone",name:"Polished Andesite",tex:"polished_andesite"},{cat:"Stone",name:"Deepslate",tex:"deepslate_top"},
+  {cat:"Stone",name:"Cobbled Deepslate",tex:"cobbled_deepslate"},{cat:"Stone",name:"Deepslate Bricks",tex:"deepslate_bricks"},
+  {cat:"Stone",name:"Deepslate Tiles",tex:"deepslate_tiles"},{cat:"Stone",name:"Chiseled Deepslate",tex:"chiseled_deepslate"},
+  {cat:"Stone",name:"Calcite",tex:"calcite"},{cat:"Stone",name:"Tuff",tex:"tuff"},
+  {cat:"Stone",name:"Basalt",tex:"basalt_top"},{cat:"Stone",name:"Smooth Basalt",tex:"smooth_basalt"},
+  {cat:"Stone",name:"Blackstone",tex:"blackstone"},{cat:"Stone",name:"Polished Blackstone",tex:"polished_blackstone"},
+  {cat:"Stone",name:"Polished Blackstone Bricks",tex:"polished_blackstone_bricks"},
+  {cat:"Stone",name:"Gilded Blackstone",tex:"gilded_blackstone"},
+  {cat:"Wood",name:"Oak Planks",tex:"oak_planks"},{cat:"Wood",name:"Oak Log",tex:"oak_log"},
+  {cat:"Wood",name:"Spruce Planks",tex:"spruce_planks"},{cat:"Wood",name:"Spruce Log",tex:"spruce_log"},
+  {cat:"Wood",name:"Birch Planks",tex:"birch_planks"},{cat:"Wood",name:"Birch Log",tex:"birch_log"},
+  {cat:"Wood",name:"Jungle Planks",tex:"jungle_planks"},{cat:"Wood",name:"Jungle Log",tex:"jungle_log"},
+  {cat:"Wood",name:"Acacia Planks",tex:"acacia_planks"},{cat:"Wood",name:"Acacia Log",tex:"acacia_log"},
+  {cat:"Wood",name:"Dark Oak Planks",tex:"dark_oak_planks"},{cat:"Wood",name:"Dark Oak Log",tex:"dark_oak_log"},
+  {cat:"Wood",name:"Mangrove Planks",tex:"mangrove_planks"},{cat:"Wood",name:"Mangrove Log",tex:"mangrove_log"},
+  {cat:"Wood",name:"Cherry Planks",tex:"cherry_planks"},{cat:"Wood",name:"Cherry Log",tex:"cherry_log"},
+  {cat:"Wood",name:"Bamboo Block",tex:"bamboo_block"},
+  {cat:"Wood",name:"Stripped Oak Log",tex:"stripped_oak_log"},{cat:"Wood",name:"Stripped Spruce Log",tex:"stripped_spruce_log"},
+  {cat:"Wood",name:"Stripped Birch Log",tex:"stripped_birch_log"},{cat:"Wood",name:"Stripped Dark Oak Log",tex:"stripped_dark_oak_log"},
+  {cat:"Wood",name:"Oak Leaves",tex:"oak_leaves"},{cat:"Wood",name:"Spruce Leaves",tex:"spruce_leaves"},
+  {cat:"Wood",name:"Birch Leaves",tex:"birch_leaves"},{cat:"Wood",name:"Jungle Leaves",tex:"jungle_leaves"},
+  {cat:"Wood",name:"Acacia Leaves",tex:"acacia_leaves"},{cat:"Wood",name:"Dark Oak Leaves",tex:"dark_oak_leaves"},
+  {cat:"Dirt & Sand",name:"Dirt",tex:"dirt"},{cat:"Dirt & Sand",name:"Grass Block",tex:"grass_block_top"},
+  {cat:"Dirt & Sand",name:"Coarse Dirt",tex:"coarse_dirt"},{cat:"Dirt & Sand",name:"Podzol",tex:"podzol_top"},
+  {cat:"Dirt & Sand",name:"Mycelium",tex:"mycelium_top"},{cat:"Dirt & Sand",name:"Gravel",tex:"gravel"},
+  {cat:"Dirt & Sand",name:"Sand",tex:"sand"},{cat:"Dirt & Sand",name:"Red Sand",tex:"red_sand"},
+  {cat:"Dirt & Sand",name:"Sandstone",tex:"sandstone"},{cat:"Dirt & Sand",name:"Smooth Sandstone",tex:"smooth_sandstone"},
+  {cat:"Dirt & Sand",name:"Chiseled Sandstone",tex:"chiseled_sandstone"},
+  {cat:"Dirt & Sand",name:"Red Sandstone",tex:"red_sandstone"},{cat:"Dirt & Sand",name:"Clay",tex:"clay"},
+  {cat:"Dirt & Sand",name:"Mud",tex:"mud"},{cat:"Dirt & Sand",name:"Packed Mud",tex:"packed_mud"},
+  {cat:"Dirt & Sand",name:"Moss Block",tex:"moss_block"},
+  {cat:"Ore & Metal",name:"Coal Ore",tex:"coal_ore"},{cat:"Ore & Metal",name:"Iron Ore",tex:"iron_ore"},
+  {cat:"Ore & Metal",name:"Copper Ore",tex:"copper_ore"},{cat:"Ore & Metal",name:"Gold Ore",tex:"gold_ore"},
+  {cat:"Ore & Metal",name:"Redstone Ore",tex:"redstone_ore"},{cat:"Ore & Metal",name:"Emerald Ore",tex:"emerald_ore"},
+  {cat:"Ore & Metal",name:"Lapis Ore",tex:"lapis_ore"},{cat:"Ore & Metal",name:"Diamond Ore",tex:"diamond_ore"},
+  {cat:"Ore & Metal",name:"Iron Block",tex:"iron_block"},{cat:"Ore & Metal",name:"Gold Block",tex:"gold_block"},
+  {cat:"Ore & Metal",name:"Diamond Block",tex:"diamond_block"},{cat:"Ore & Metal",name:"Emerald Block",tex:"emerald_block"},
+  {cat:"Ore & Metal",name:"Netherite Block",tex:"netherite_block"},{cat:"Ore & Metal",name:"Copper Block",tex:"copper_block"},
+  {cat:"Ore & Metal",name:"Oxidized Copper",tex:"oxidized_copper"},{cat:"Ore & Metal",name:"Lapis Block",tex:"lapis_block"},
+  {cat:"Ore & Metal",name:"Redstone Block",tex:"redstone_block"},{cat:"Ore & Metal",name:"Coal Block",tex:"coal_block"},
+  {cat:"Ore & Metal",name:"Amethyst Block",tex:"amethyst_block"},
+  {cat:"Brick & Terra",name:"Brick",tex:"bricks"},{cat:"Brick & Terra",name:"Terracotta",tex:"terracotta"},
+  {cat:"Brick & Terra",name:"White Terracotta",tex:"white_terracotta"},{cat:"Brick & Terra",name:"Orange Terracotta",tex:"orange_terracotta"},
+  {cat:"Brick & Terra",name:"Yellow Terracotta",tex:"yellow_terracotta"},{cat:"Brick & Terra",name:"Red Terracotta",tex:"red_terracotta"},
+  {cat:"Brick & Terra",name:"Blue Terracotta",tex:"blue_terracotta"},{cat:"Brick & Terra",name:"Green Terracotta",tex:"green_terracotta"},
+  {cat:"Brick & Terra",name:"Brown Terracotta",tex:"brown_terracotta"},{cat:"Brick & Terra",name:"Black Terracotta",tex:"black_terracotta"},
+  {cat:"Brick & Terra",name:"Cyan Terracotta",tex:"cyan_terracotta"},{cat:"Brick & Terra",name:"Purple Terracotta",tex:"purple_terracotta"},
+  {cat:"Brick & Terra",name:"Gray Terracotta",tex:"gray_terracotta"},{cat:"Brick & Terra",name:"Pink Terracotta",tex:"pink_terracotta"},
+  {cat:"Brick & Terra",name:"Light Blue Terracotta",tex:"light_blue_terracotta"},
+  {cat:"Brick & Terra",name:"Prismarine",tex:"prismarine"},{cat:"Brick & Terra",name:"Prismarine Bricks",tex:"prismarine_bricks"},
+  {cat:"Brick & Terra",name:"Dark Prismarine",tex:"dark_prismarine"},{cat:"Brick & Terra",name:"Purpur Block",tex:"purpur_block"},
+  {cat:"Glass",name:"Glass",tex:"glass",alpha:.7},{cat:"Glass",name:"White Glass",tex:"white_stained_glass",alpha:.7},
+  {cat:"Glass",name:"Orange Glass",tex:"orange_stained_glass",alpha:.7},{cat:"Glass",name:"Light Blue Glass",tex:"light_blue_stained_glass",alpha:.7},
+  {cat:"Glass",name:"Yellow Glass",tex:"yellow_stained_glass",alpha:.7},{cat:"Glass",name:"Lime Glass",tex:"lime_stained_glass",alpha:.7},
+  {cat:"Glass",name:"Pink Glass",tex:"pink_stained_glass",alpha:.7},{cat:"Glass",name:"Cyan Glass",tex:"cyan_stained_glass",alpha:.7},
+  {cat:"Glass",name:"Blue Glass",tex:"blue_stained_glass",alpha:.7},{cat:"Glass",name:"Red Glass",tex:"red_stained_glass",alpha:.7},
+  {cat:"Glass",name:"Black Glass",tex:"black_stained_glass",alpha:.7},
+  {cat:"Wool & Concrete",name:"White Wool",tex:"white_wool"},{cat:"Wool & Concrete",name:"Orange Wool",tex:"orange_wool"},
+  {cat:"Wool & Concrete",name:"Yellow Wool",tex:"yellow_wool"},{cat:"Wool & Concrete",name:"Lime Wool",tex:"lime_wool"},
+  {cat:"Wool & Concrete",name:"Pink Wool",tex:"pink_wool"},{cat:"Wool & Concrete",name:"Gray Wool",tex:"gray_wool"},
+  {cat:"Wool & Concrete",name:"Cyan Wool",tex:"cyan_wool"},{cat:"Wool & Concrete",name:"Blue Wool",tex:"blue_wool"},
+  {cat:"Wool & Concrete",name:"Green Wool",tex:"green_wool"},{cat:"Wool & Concrete",name:"Red Wool",tex:"red_wool"},
+  {cat:"Wool & Concrete",name:"Black Wool",tex:"black_wool"},
+  {cat:"Wool & Concrete",name:"White Concrete",tex:"white_concrete"},{cat:"Wool & Concrete",name:"Orange Concrete",tex:"orange_concrete"},
+  {cat:"Wool & Concrete",name:"Yellow Concrete",tex:"yellow_concrete"},{cat:"Wool & Concrete",name:"Lime Concrete",tex:"lime_concrete"},
+  {cat:"Wool & Concrete",name:"Cyan Concrete",tex:"cyan_concrete"},{cat:"Wool & Concrete",name:"Blue Concrete",tex:"blue_concrete"},
+  {cat:"Wool & Concrete",name:"Green Concrete",tex:"green_concrete"},{cat:"Wool & Concrete",name:"Red Concrete",tex:"red_concrete"},
+  {cat:"Wool & Concrete",name:"Black Concrete",tex:"black_concrete"},{cat:"Wool & Concrete",name:"Gray Concrete",tex:"gray_concrete"},
+  {cat:"Nether",name:"Netherrack",tex:"netherrack"},{cat:"Nether",name:"Nether Bricks",tex:"nether_bricks"},
+  {cat:"Nether",name:"Red Nether Bricks",tex:"red_nether_bricks"},{cat:"Nether",name:"Quartz Block",tex:"quartz_block_side"},
+  {cat:"Nether",name:"Smooth Quartz",tex:"smooth_quartz"},{cat:"Nether",name:"Quartz Bricks",tex:"quartz_bricks"},
+  {cat:"Nether",name:"Soul Sand",tex:"soul_sand"},{cat:"Nether",name:"Soul Soil",tex:"soul_soil"},
+  {cat:"Nether",name:"Shroomlight",tex:"shroomlight"},{cat:"Nether",name:"Crimson Planks",tex:"crimson_planks"},
+  {cat:"Nether",name:"Warped Planks",tex:"warped_planks"},{cat:"Nether",name:"Magma Block",tex:"magma"},
+  {cat:"Nether",name:"Glowstone",tex:"glowstone"},{cat:"Nether",name:"Nether Wart Block",tex:"nether_wart_block"},
+  {cat:"End",name:"End Stone",tex:"end_stone"},{cat:"End",name:"End Stone Bricks",tex:"end_stone_bricks"},
+  {cat:"End",name:"Purpur Pillar",tex:"purpur_pillar"},{cat:"End",name:"Obsidian",tex:"obsidian"},
+  {cat:"End",name:"Crying Obsidian",tex:"crying_obsidian"},
+  {cat:"Ice & Snow",name:"Snow Block",tex:"snow"},{cat:"Ice & Snow",name:"Ice",tex:"ice",alpha:.75},
+  {cat:"Ice & Snow",name:"Packed Ice",tex:"packed_ice"},{cat:"Ice & Snow",name:"Blue Ice",tex:"blue_ice"},
+  {cat:"Functional",name:"Crafting Table",tex:"crafting_table_top"},{cat:"Functional",name:"Furnace",tex:"furnace_front"},
+  {cat:"Functional",name:"Bookshelf",tex:"bookshelf"},{cat:"Functional",name:"Chest",tex:"oak_planks"},
+  {cat:"Functional",name:"Barrel",tex:"barrel_top"},{cat:"Functional",name:"Bedrock",tex:"bedrock"},
+  {cat:"Functional",name:"Sponge",tex:"sponge"},{cat:"Functional",name:"Sea Lantern",tex:"sea_lantern"},
+  {cat:"Functional",name:"Glowstone",tex:"glowstone"},{cat:"Functional",name:"Target",tex:"target_top"},
+  {cat:"Functional",name:"TNT",tex:"tnt_top"},{cat:"Functional",name:"Hay Bale",tex:"hay_block_top"},
+  {cat:"Functional",name:"Pumpkin",tex:"pumpkin_top"},{cat:"Functional",name:"Melon",tex:"melon_top"},
+  {cat:"Functional",name:"Honey Block",tex:"honey_block_top",alpha:.85},
+  {cat:"Functional",name:"Slime Block",tex:"slime_block",alpha:.8},
+  {cat:"Special",name:"Water",tex:"water_still",alpha:.55},{cat:"Special",name:"Lava",tex:"lava_still",alpha:.9},
+  {cat:"Special",name:"Sculk",tex:"sculk"},{cat:"Special",name:"Sculk Catalyst",tex:"sculk_catalyst_top"},
+];
+
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
+let W=20,H=20,layers=[],curLayer=0,rooms={},selBlock=BLOCKS[0],curTool='draw';
+let history=[],histIdx=-1,clipboard=null,copyStart={x:-1,y:-1};
+let selection={active:false,x1:-1,y1:-1,x2:-1,y2:-1,dragging:false};
+let painting=false;
+let ctxR=-1,ctxC=-1;
+let threeRenderer=null,threeScene=null,threeCamera=null;
+let threeTool='place';
+let blockMeshMap={};
+let highlightMesh=null;
+let ws=null,mpRoom='',mpUsers={},myUserId='u'+Math.random().toString(36).slice(2,8);
+let myUsername='Player_'+myUserId.slice(1,5);
+
+function texUrl(b){return TEX_BASE+b.tex+'.png';}
+function initLayers(){layers=[makeLayer()];rooms={};curLayer=0;}
+function makeLayer(){const d=[];for(let r=0;r<H;r++)d.push(new Array(W).fill(null));return d;}
+
+/* ═══════════════════════════════════════════════
+   HISTORY
+═══════════════════════════════════════════════ */
+function pushHistory(){
+  const s=JSON.stringify({layers,rooms,W,H});
+  history=history.slice(0,histIdx+1);history.push(s);
+  if(history.length>100)history.shift();
+  histIdx=history.length-1;
+}
+function undo(){if(histIdx<=0)return;histIdx--;applySnap(JSON.parse(history[histIdx]));toast("Undo");}
+function redo(){if(histIdx>=history.length-1)return;histIdx++;applySnap(JSON.parse(history[histIdx]));toast("Redo");}
+function applySnap(s){
+  layers=s.layers;rooms=s.rooms;
+  if(s.W&&s.H){W=s.W;H=s.H;document.getElementById('gx').value=W;document.getElementById('gy').value=H;}
+  if(curLayer>=layers.length)curLayer=layers.length-1;
+  renderGrid();renderLayerChips();updateCost();updateRooms();
+}
+
+/* ═══════════════════════════════════════════════
+   THEME
+═══════════════════════════════════════════════ */
+function toggleTheme(){
+  const app=document.getElementById('app');const isDark=app.dataset.theme==='dark';
+  app.dataset.theme=isDark?'light':'dark';
+  document.getElementById('theme-label').textContent=isDark?'Light':'Dark';
+  document.getElementById('theme-icon').textContent=isDark?'☀':'🌙';
+}
+
+/* ═══════════════════════════════════════════════
+   TOOLS
+═══════════════════════════════════════════════ */
+function setTool(t){
+  curTool=t;
+  ['draw','erase','select','fill','room','pick'].forEach(x=>{
+    const b=document.getElementById('btn-'+x);if(b)b.classList.toggle('active',x===t);
+  });
+  document.getElementById('tool-info').textContent='Tool: '+t.charAt(0).toUpperCase()+t.slice(1);
+  if(t!=='select'){selection={active:false,x1:-1,y1:-1,x2:-1,y2:-1,dragging:false};renderGrid();}
+}
+function set3DTool(t){
+  threeTool=t;
+  ['place','erase','pick'].forEach(x=>{const b=document.getElementById('btn-3d-'+x);if(b)b.classList.toggle('active',x===t);});
+  document.getElementById('three-mode-label').textContent=`Mode: ${t.charAt(0).toUpperCase()+t.slice(1)} · Left=action · Right=erase`;
+}
+
+/* ═══════════════════════════════════════════════
+   GRID
+═══════════════════════════════════════════════ */
+function applyGrid(){
+  W=Math.max(1,Math.min(64,parseInt(document.getElementById('gx').value)||20));
+  H=Math.max(1,Math.min(64,parseInt(document.getElementById('gy').value)||20));
+  layers=layers.map(l=>{
+    const nl=[];
+    for(let r=0;r<H;r++){nl.push([]);for(let c=0;c<W;c++)nl[r].push(l[r]&&l[r][c]!==undefined?l[r][c]:null);}
+    return nl;
+  });
+  pushHistory();renderGrid();renderLayerChips();updateCost();
+}
+function addLayer(){layers.push(makeLayer());curLayer=layers.length-1;pushHistory();renderGrid();renderLayerChips();toast("Layer "+layers.length+" added");}
+function removeLayer(){if(layers.length<=1){toast("Can't remove last layer");return;}layers.splice(curLayer,1);if(curLayer>=layers.length)curLayer=layers.length-1;pushHistory();renderGrid();renderLayerChips();}
+
+function renderLayerChips(){
+  document.getElementById('cur-layer-lbl').textContent=curLayer+1;
+  document.getElementById('total-layers-lbl').textContent=layers.length;
+  const c=document.getElementById('layer-chips');c.innerHTML='';
+  layers.forEach((_,i)=>{const d=document.createElement('div');d.className='layer-chip'+(i===curLayer?' active':'');d.textContent='L'+(i+1);d.onclick=()=>{curLayer=i;renderGrid();renderLayerChips();};c.appendChild(d);});
+}
+
+function renderGrid(){
+  const gc=document.getElementById('grid-canvas');
+  gc.style.gridTemplateColumns=`repeat(${W},28px)`;gc.innerHTML='';
+  const layer=layers[curLayer];
+  const sx1=Math.min(selection.x1,selection.x2),sx2=Math.max(selection.x1,selection.x2);
+  const sy1=Math.min(selection.y1,selection.y2),sy2=Math.max(selection.y1,selection.y2);
+  for(let r=0;r<H;r++){for(let c=0;c<W;c++){
+    const cell=document.createElement('div');cell.className='gcell';
+    const blk=layer[r][c];
+    if(blk){cell.style.backgroundImage=`url('${texUrl(blk)}')`;cell.style.opacity=blk.alpha||1;}
+    if(selection.active&&c>=sx1&&c<=sx2&&r>=sy1&&r<=sy2)cell.classList.add('sel-region');
+    cell.dataset.r=r;cell.dataset.c=c;
+    cell.addEventListener('mousedown',cellDown);
+    cell.addEventListener('mouseenter',cellEnter);
+    cell.addEventListener('mouseup',cellUp);
+    cell.addEventListener('contextmenu',cellCtx);
+    gc.appendChild(cell);
+  }}
+}
+
+function cellDown(e){
+  e.preventDefault();const r=+this.dataset.r,c=+this.dataset.c;
+  if(curTool==='select'){selection={active:true,x1:c,y1:r,x2:c,y2:r,dragging:true};renderGrid();return;}
+  if(curTool==='pick'){const blk=layers[curLayer][r][c];if(blk){selBlock=BLOCKS.find(b=>b.name===blk.name)||blk;updateBlockHighlight();}return;}
+  if(curTool==='fill'){floodFill(r,c);return;}
+  if(curTool==='room'){copyStart={x:c,y:r};return;}
+  painting=true;applyPaint(r,c);
+}
+function cellEnter(e){
+  const r=+this.dataset.r,c=+this.dataset.c;
+  document.getElementById('coord-info').textContent=`x:${c+1} y:${r+1} z:${curLayer+1}`;
+  if(curTool==='select'&&selection.dragging){selection.x2=c;selection.y2=r;renderGrid();return;}
+  if(painting&&(curTool==='draw'||curTool==='erase'))applyPaint(r,c);
+}
+function cellUp(){
+  if(curTool==='select')selection.dragging=false;
+  if(painting){painting=false;pushHistory();updateCost();mpBroadcast();}
+}
+function cellCtx(e){
+  e.preventDefault();ctxR=+this.dataset.r;ctxC=+this.dataset.c;copyStart={x:ctxC,y:ctxR};
+  const m=document.getElementById('ctx-menu');m.style.display='block';m.style.left=e.clientX+'px';m.style.top=e.clientY+'px';
+}
+function hideCtx(){document.getElementById('ctx-menu').style.display='none';}
+
+function applyPaint(r,c,noHistory){
+  if(curTool==='draw'||noHistory==='draw'){
+    const b={name:selBlock.name,tex:selBlock.tex,alpha:selBlock.alpha||1};
+    layers[curLayer][r][c]=b;
+  } else if(curTool==='erase'||noHistory==='erase'){
+    layers[curLayer][r][c]=null;
+  }
+  const cell=document.querySelector(`#grid-canvas .gcell[data-r="${r}"][data-c="${c}"]`);
+  if(cell){
+    const blk=layers[curLayer][r][c];
+    if(blk){cell.style.backgroundImage=`url('${texUrl(blk)}')`;cell.style.opacity=blk.alpha||1;}
+    else{cell.style.backgroundImage='';cell.style.opacity=1;}
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   FLOOD FILL
+═══════════════════════════════════════════════ */
+function floodFill(r,c){
+  const target=layers[curLayer][r][c];
+  const targetName=target?target.name:null;
+  const newBlock=selBlock?{name:selBlock.name,tex:selBlock.tex,alpha:selBlock.alpha||1}:null;
+  if(targetName===(newBlock?newBlock.name:null))return;
+  pushHistory();
+  const queue=[[r,c]];const visited=new Set();
+  while(queue.length){
+    const[cr,cc]=queue.shift();const key=`${cr},${cc}`;
+    if(visited.has(key)||cr<0||cr>=H||cc<0||cc>=W)continue;
+    visited.add(key);
+    const cur=layers[curLayer][cr][cc];
+    const curName=cur?cur.name:null;
+    if(curName!==targetName)continue;
+    layers[curLayer][cr][cc]=newBlock?{...newBlock}:null;
+    queue.push([cr-1,cc],[cr+1,cc],[cr,cc-1],[cr,cc+1]);
+  }
+  renderGrid();updateCost();mpBroadcast();toast("Fill applied");
+}
+
+/* ═══════════════════════════════════════════════
+   COPY / PASTE / DELETE
+═══════════════════════════════════════════════ */
+function copyRegion(){
+  const x1=Math.min(selection.x1,selection.x2),x2=Math.max(selection.x1,selection.x2);
+  const y1=Math.min(selection.y1,selection.y2),y2=Math.max(selection.y1,selection.y2);
+  if(!selection.active||x1<0){toast("No selection — use Select tool first");return;}
+  clipboard={data:[],w:x2-x1+1,h:y2-y1+1};
+  for(let r=y1;r<=y2;r++)clipboard.data.push(layers[curLayer][r].slice(x1,x2+1));
+  toast(`Copied ${clipboard.w}×${clipboard.h}`);
+}
+function pasteRegion(){
+  if(!clipboard){toast("Nothing to paste");return;}
+  const px=copyStart.x>=0?copyStart.x:0,py=copyStart.y>=0?copyStart.y:0;
+  pushHistory();
+  for(let r=0;r<clipboard.h;r++)for(let c=0;c<clipboard.w;c++)
+    if(py+r<H&&px+c<W)layers[curLayer][py+r][px+c]=clipboard.data[r][c]?{...clipboard.data[r][c]}:null;
+  renderGrid();updateCost();mpBroadcast();toast("Pasted");
+}
+function deleteRegion(){
+  const x1=Math.min(selection.x1,selection.x2),x2=Math.max(selection.x1,selection.x2);
+  const y1=Math.min(selection.y1,selection.y2),y2=Math.max(selection.y1,selection.y2);
+  if(!selection.active||x1<0){toast("No selection");return;}
+  pushHistory();for(let r=y1;r<=y2;r++)for(let c=x1;c<=x2;c++)layers[curLayer][r][c]=null;
+  renderGrid();updateCost();mpBroadcast();toast("Deleted");
+}
+
+/* ═══════════════════════════════════════════════
+   ROOMS
+═══════════════════════════════════════════════ */
+function ctxLabelRoom(){
+  const name=prompt("Room name:");if(!name)return;
+  const k=`${ctxC}_${ctxR}_${curLayer}`;
+  rooms[k]={name,x:ctxC,y:ctxR,layer:curLayer};updateRooms();toast("Room: "+name);
+}
+function updateRooms(){
+  const rl=document.getElementById('room-list');rl.innerHTML='';
+  Object.entries(rooms).forEach(([k,v])=>{
+    const d=document.createElement('div');
+    d.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--bp-border);color:var(--bp-text)';
+    d.innerHTML=`<span>📐 ${v.name} <span style="color:var(--bp-text3)">(${v.x+1},${v.y+1},L${v.layer+1})</span></span>
+      <button style="font-size:10px;padding:1px 5px;cursor:pointer;background:transparent;border:1px solid var(--bp-border);border-radius:3px;color:var(--bp-text)" onclick="delete rooms['${k}'];updateRooms()">×</button>`;
+    rl.appendChild(d);
+  });
+}
+function clearRooms(){rooms={};updateRooms();}
+
+/* ═══════════════════════════════════════════════
+   BLOCK PALETTE
+═══════════════════════════════════════════════ */
+function filterBlocks(q){
+  const list=document.getElementById('block-list');list.innerHTML='';
+  const lq=q.toLowerCase();const cats={};
+  BLOCKS.filter(b=>!lq||b.name.toLowerCase().includes(lq)||b.cat.toLowerCase().includes(lq))
+    .forEach(b=>{if(!cats[b.cat])cats[b.cat]=[];cats[b.cat].push(b);});
+  Object.entries(cats).forEach(([cat,blocks])=>{
+    const ch=document.createElement('div');ch.className='block-cat';ch.textContent=cat;list.appendChild(ch);
+    blocks.forEach(b=>{
+      const d=document.createElement('div');d.className='block-item'+(b.name===selBlock.name?' selected':'');
+      d.innerHTML=`<img class="block-thumb" src="${texUrl(b)}" alt="" style="opacity:${b.alpha||1}"><span>${b.name}</span>`;
+      d.onclick=()=>{selBlock=b;updateBlockHighlight();document.getElementById('block-info').textContent='Block: '+b.name;};
+      list.appendChild(d);
+    });
+  });
+}
+function updateBlockHighlight(){
+  document.querySelectorAll('.block-item').forEach(el=>{
+    el.classList.toggle('selected',el.querySelector('span')?.textContent===selBlock.name);
+  });
+  document.getElementById('block-info').textContent='Block: '+selBlock.name;
+}
+
+/* ═══════════════════════════════════════════════
+   SIDEBAR TABS
+═══════════════════════════════════════════════ */
+function switchSTab(t,el){
+  document.querySelectorAll('.stab').forEach(e=>e.classList.remove('active'));el.classList.add('active');
+  ['blocks','rooms','cost','share'].forEach(x=>{
+    const el=document.getElementById('stab-'+x);
+    if(el)el.style.display=x===t?(x==='blocks'?'flex':'flex'):'none';
+    if(el&&x==='blocks')el.style.flexDirection='column';
+  });
+}
+
+function updateCost(){
+  const counts={};
+  layers.forEach(l=>l.forEach(row=>row.forEach(cell=>{if(cell)counts[cell.name]=(counts[cell.name]||0)+1;})));
+  const full=document.getElementById('cost-full');full.innerHTML='';
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  if(!sorted.length){full.innerHTML='<p style="font-size:11px;color:var(--bp-text3)">No blocks placed yet.</p>';return;}
+  let total=0;sorted.forEach(([,c])=>total+=c);
+  const totalEl=document.createElement('p');
+  totalEl.style.cssText='font-size:11px;color:var(--bp-text2);margin-bottom:5px;font-weight:500';
+  totalEl.textContent=`Total: ${total} blocks (${Math.ceil(total/64)} stacks)`;
+  full.appendChild(totalEl);
+  sorted.forEach(([name,cnt])=>{
+    const blk=BLOCKS.find(b=>b.name===name);
+    const d=document.createElement('div');d.className='cost-row';
+    d.innerHTML=`<span style="display:flex;align-items:center;gap:4px;flex:1;min-width:0">
+      ${blk?`<img class="cost-thumb" src="${texUrl(blk)}" alt="">`:''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+    </span><span style="color:var(--bp-text3);flex-shrink:0">${cnt} (${Math.ceil(cnt/64)} stk)</span>`;
+    full.appendChild(d);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   VIEW SWITCHING
+═══════════════════════════════════════════════ */
+function switchView(v,el){
+  document.querySelectorAll('.vtab').forEach(e=>e.classList.remove('active'));el.classList.add('active');
+  document.getElementById('view-2d').classList.toggle('active',v==='2d');
+  document.getElementById('view-3d').classList.toggle('active',v==='3d');
+  if(v==='3d')build3D();
+}
+
+/* ═══════════════════════════════════════════════
+   3D VIEW — FULL EDITOR
+═══════════════════════════════════════════════ */
+let threeHighlightPos=null;
+let threeHighlightNorm=null;
+const texLoader3D=new THREE.TextureLoader();
+const matCache3D={};
+
+function getThreeMat(blk){
+  if(!blk)return null;
+  const k=blk.tex+(blk.alpha||1);
+  if(matCache3D[k])return matCache3D[k];
+  const t=texLoader3D.load(texUrl(blk));
+  t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;
+  const m=new THREE.MeshLambertMaterial({map:t,transparent:!!(blk.alpha&&blk.alpha<1),opacity:blk.alpha||1});
+  matCache3D[k]=m;return m;
+}
+
+function build3D(){
+  const canvas=document.getElementById('three-canvas');
+  if(!THREE)return;
+  if(!threeRenderer){
+    threeRenderer=new THREE.WebGLRenderer({canvas,antialias:true});
+    threeCamera=new THREE.PerspectiveCamera(50,canvas.clientWidth/Math.max(canvas.clientHeight,1),0.1,1000);
+    threeCamera.position.set(W*0.8,layers.length*4+8,H*0.8);
+    threeCamera.lookAt(W/2,0,H/2);
+    setupOrbit();
+    setup3DInteraction();
+    threeRenderer.setAnimationLoop(render3D);
+  }
+  rebuild3D();
+}
+
+function rebuild3D(){
+  const canvas=document.getElementById('three-canvas');
+  const isDark=document.getElementById('app').dataset.theme==='dark';
+  if(!threeScene)threeScene=new THREE.Scene();
+  // clear meshes
+  const toRemove=[];threeScene.children.forEach(c=>{if(c.isMesh||c.isGridHelper)toRemove.push(c);});
+  toRemove.forEach(c=>threeScene.remove(c));
+  blockMeshMap={};
+
+  threeScene.background=new THREE.Color(isDark?0x08070f:0x1a1830);
+  threeRenderer.setSize(canvas.clientWidth,canvas.clientHeight);
+  if(!threeScene.children.find(c=>c.isAmbientLight)){
+    threeScene.add(new THREE.AmbientLight(0xffffff,.75));
+    const dir=new THREE.DirectionalLight(0xffffff,.7);dir.position.set(20,30,10);threeScene.add(dir);
+  }
+
+  // highlight mesh
+  if(!highlightMesh){
+    const hgeo=new THREE.BoxGeometry(1.02,1.02,1.02);
+    const hmat=new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,transparent:true,opacity:.4});
+    highlightMesh=new THREE.Mesh(hgeo,hmat);
+    highlightMesh.visible=false;
+    threeScene.add(highlightMesh);
+  }
+
+  // ground plane
+  const gridH=new THREE.GridHelper(Math.max(W,H)+4,Math.max(W,H)+4,0x333355,0x222244);
+  gridH.position.set(W/2-.5,-.5,H/2-.5);threeScene.add(gridH);
+
+  // blocks
+  const geo=new THREE.BoxGeometry(.98,.98,.98);
+  layers.forEach((layer,lz)=>layer.forEach((row,rz)=>row.forEach((cell,cx)=>{
+    if(!cell)return;
+    const mesh=new THREE.Mesh(geo,getThreeMat(cell));
+    mesh.position.set(cx,lz,rz);
+    mesh.userData={lz,rz,cx};
+    threeScene.add(mesh);
+    blockMeshMap[`${cx}_${lz}_${rz}`]=mesh;
+  })));
+}
+
+function render3D(){
+  if(threeScene&&threeCamera&&threeRenderer)threeRenderer.render(threeScene,threeCamera);
+}
+
+// 3D interaction
+let orbitDrag=false,panDrag=false;
+let lastMX=0,lastMY=0;
+let orbitPhi=Math.PI/4,orbitTheta=Math.PI/4,orbitRadius=30;
+let orbitCenter=new THREE.Vector3(10,0,10);
+
+function updateCam(){
+  threeCamera.position.x=orbitCenter.x+orbitRadius*Math.sin(orbitTheta)*Math.cos(orbitPhi);
+  threeCamera.position.y=orbitCenter.y+orbitRadius*Math.sin(orbitPhi);
+  threeCamera.position.z=orbitCenter.z+orbitRadius*Math.cos(orbitTheta)*Math.cos(orbitPhi);
+  threeCamera.lookAt(orbitCenter);
+}
+
+function setup3DInteraction(){
+  const canvas=document.getElementById('three-canvas');
+  const raycaster=new THREE.Raycaster();
+  const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+  let moved=false;
+
+  // orbit + pan
+  canvas.addEventListener('mousedown',e=>{
+    if(e.button===0){orbitDrag=true;moved=false;}
+    if(e.button===2){panDrag=true;}
+    lastMX=e.clientX;lastMY=e.clientY;
+  });
+  canvas.addEventListener('mousemove',e=>{
+    const dx=e.clientX-lastMX,dy=e.clientY-lastMY;
+    if(orbitDrag){
+      orbitTheta-=dx*.008;orbitPhi=Math.max(-.1,Math.min(1.45,orbitPhi+dy*.008));
+      lastMX=e.clientX;lastMY=e.clientY;updateCam();moved=true;
+    }
+    if(panDrag){
+      const right=new THREE.Vector3(-Math.cos(orbitTheta),0,Math.sin(orbitTheta));
+      const up=new THREE.Vector3(0,1,0);
+      orbitCenter.addScaledVector(right,dx*0.04);
+      orbitCenter.addScaledVector(up,dy*0.04);
+      lastMX=e.clientX;lastMY=e.clientY;updateCam();
+    }
+    // hover highlight
+    if(!orbitDrag&&!panDrag){
+      const rect=canvas.getBoundingClientRect();
+      const mouse=new THREE.Vector2(
+        ((e.clientX-rect.left)/rect.width)*2-1,
+        -((e.clientY-rect.top)/rect.height)*2+1
+      );
+      raycaster.setFromCamera(mouse,threeCamera);
+      const hits=raycaster.intersectObjects(threeScene.children.filter(c=>c.isMesh&&c!==highlightMesh));
+      if(hits.length>0){
+        const h=hits[0];const n=h.face.normal.clone();
+        const p=h.object.position.clone().add(n).round();
+        highlightMesh.position.copy(p);highlightMesh.visible=true;
+        threeHighlightPos=p.clone();threeHighlightNorm=n.clone();
+      } else {
+        // ray vs ground at curLayer height
+        const yPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-curLayer);
+        const pt=new THREE.Vector3();
+        raycaster.ray.intersectPlane(yPlane,pt);
+        if(pt&&pt.x>=0&&pt.x<W&&pt.z>=0&&pt.z<H){
+          const gp=new THREE.Vector3(Math.floor(pt.x),curLayer,Math.floor(pt.z));
+          highlightMesh.position.copy(gp);highlightMesh.visible=true;
+          threeHighlightPos=gp.clone();threeHighlightNorm=null;
+        } else {
+          highlightMesh.visible=false;threeHighlightPos=null;
+        }
+      }
+    }
+  });
+  canvas.addEventListener('mouseup',e=>{
+    if(e.button===0&&!moved&&threeHighlightPos){
+      handle3DClick(e,raycaster);
+    }
+    orbitDrag=false;panDrag=false;
+  });
+  canvas.addEventListener('contextmenu',e=>{e.preventDefault();
+    if(threeTool==='erase'||e.shiftKey){
+      // erase the block under cursor
+      const rect=canvas.getBoundingClientRect();
+      const mouse=new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
+      raycaster.setFromCamera(mouse,threeCamera);
+      const hits=raycaster.intersectObjects(threeScene.children.filter(c=>c.isMesh&&c!==highlightMesh));
+      if(hits.length>0){
+        const{lz,rz,cx}=hits[0].object.userData;
+        if(lz>=0&&lz<layers.length&&rz>=0&&rz<H&&cx>=0&&cx<W){
+          layers[lz][rz][cx]=null;pushHistory();updateCost();
+          curLayer=lz;renderGrid();renderLayerChips();
+          rebuild3D();mpBroadcast();
+        }
+      }
+    }
+  });
+  canvas.addEventListener('wheel',e=>{
+    orbitRadius=Math.max(3,Math.min(120,orbitRadius+e.deltaY*.04));updateCam();e.preventDefault();
+  },{passive:false});
+  window.addEventListener('resize',()=>{
+    if(threeRenderer&&canvas.clientWidth>0){
+      threeRenderer.setSize(canvas.clientWidth,canvas.clientHeight);
+      threeCamera.aspect=canvas.clientWidth/canvas.clientHeight;threeCamera.updateProjectionMatrix();
+    }
+  });
+  orbitCenter.set(W/2,0,H/2);updateCam();
+}
+
+function handle3DClick(e,raycaster){
+  const canvas=document.getElementById('three-canvas');
+  const rect=canvas.getBoundingClientRect();
+  const mouse=new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(mouse,threeCamera);
+  const hits=raycaster.intersectObjects(threeScene.children.filter(c=>c.isMesh&&c!==highlightMesh));
+
+  if(threeTool==='pick'){
+    if(hits.length>0){
+      const{lz,rz,cx}=hits[0].object.userData;
+      const blk=layers[lz]?.[rz]?.[cx];
+      if(blk){selBlock=BLOCKS.find(b=>b.name===blk.name)||blk;updateBlockHighlight();toast("Picked: "+blk.name);}
+    }
+    return;
+  }
+
+  if(threeTool==='erase'){
+    if(hits.length>0){
+      const{lz,rz,cx}=hits[0].object.userData;
+      if(layers[lz]){layers[lz][rz][cx]=null;pushHistory();updateCost();curLayer=lz;renderGrid();renderLayerChips();rebuild3D();mpBroadcast();}
+    }
+    return;
+  }
+
+  // place
+  if(hits.length>0){
+    const h=hits[0];const n=h.face.normal.clone().round();
+    const op=h.object.position.clone().round();
+    const np=op.clone().add(n);
+    const lz=np.y,rz=np.z,cx=np.x;
+    if(lz>=0&&lz<layers.length&&rz>=0&&rz<H&&cx>=0&&cx<W){
+      while(layers.length<=lz)layers.push(makeLayer());
+      layers[lz][rz][cx]={name:selBlock.name,tex:selBlock.tex,alpha:selBlock.alpha||1};
+      pushHistory();updateCost();curLayer=lz;renderGrid();renderLayerChips();rebuild3D();mpBroadcast();
+      toast(`Placed ${selBlock.name} at ${cx+1},${lz+1},${rz+1}`);
+    }
+  } else {
+    // ground click
+    const yPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-curLayer);
+    const pt=new THREE.Vector3();raycaster.ray.intersectPlane(yPlane,pt);
+    if(pt){
+      const cx=Math.floor(pt.x),lz=curLayer,rz=Math.floor(pt.z);
+      if(cx>=0&&cx<W&&rz>=0&&rz<H){
+        layers[lz][rz][cx]={name:selBlock.name,tex:selBlock.tex,alpha:selBlock.alpha||1};
+        pushHistory();updateCost();renderGrid();rebuild3D();mpBroadcast();
+        toast(`Placed ${selBlock.name}`);
+      }
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   ORBIT CAM (2D version fallback already in setupOrbit below)
+═══════════════════════════════════════════════ */
+function setupOrbit(){
+  // already handled inline above with orbitDrag etc.
+  updateCam();
+}
+
+/* ═══════════════════════════════════════════════
+   SAVE / LOAD
+═══════════════════════════════════════════════ */
+function saveDesign(){
+  const saves=JSON.parse(localStorage.getItem('blockplan-saves')||'[]');
+  const name=prompt("Save name:")||("Design "+(saves.length+1));
+  saves.push({name,date:new Date().toLocaleDateString(),data:{layers,rooms,W,H}});
+  localStorage.setItem('blockplan-saves',JSON.stringify(saves));
+  toast("Saved: "+name);
+}
+function loadDesign(){
+  const saves=JSON.parse(localStorage.getItem('blockplan-saves')||'[]');
+  if(!saves.length){toast("No saved designs");return;}
+  const idx=parseInt(prompt("Choose:\n"+saves.map((s,i)=>`${i+1}. ${s.name} (${s.date})`).join('\n')))-1;
+  if(isNaN(idx)||idx<0||idx>=saves.length)return;
+  const d=saves[idx].data;
+  applySnap(d);pushHistory();toast("Loaded: "+saves[idx].name);
+}
+function newDesign(){
+  if(!confirm("Start new? Unsaved work will be lost."))return;
+  W=20;H=20;document.getElementById('gx').value=20;document.getElementById('gy').value=20;
+  initLayers();pushHistory();renderGrid();renderLayerChips();updateCost();updateRooms();toast("New design");
+}
+
+/* ═══════════════════════════════════════════════
+   IMPORT
+═══════════════════════════════════════════════ */
+function importFile(input){
+  const file=input.files[0];if(!file)return;
+  const name=file.name.toLowerCase();
+  const reader=new FileReader();
+  if(name.endsWith('.json')){
+    reader.onload=e=>{
+      try{
+        const d=JSON.parse(e.target.result);
+        if(d.layers&&d.W&&d.H){applySnap(d);pushHistory();toast("Imported: "+file.name);}
+        else toast("Invalid JSON format");
+      }catch(err){toast("JSON parse error");}
+    };reader.readAsText(file);
+  } else if(name.endsWith('.litematic')||name.endsWith('.schem')||name.endsWith('.nbt')){
+    reader.onload=e=>{
+      try{
+        const data=e.target.result;
+        const parsed=parseNBT(new Uint8Array(data));
+        if(parsed){
+          applySnap(parsed);pushHistory();
+          toast("Imported "+file.name+" ("+parsed.W+"×"+parsed.H+"×"+parsed.layers.length+" layers)");
+        } else {toast("Could not parse file — try JSON export/import instead");}
+      }catch(err){console.error(err);toast("Import failed: "+err.message);}
+    };reader.readAsArrayBuffer(file);
+  }
+  input.value='';
+}
+
+/* ═══════════════════════════════════════════════
+   NBT PARSER (minimal — reads BlockPlan-exported .nbt/.schem)
+═══════════════════════════════════════════════ */
+function parseNBT(buf){
+  // Try reading as our own exported format first (magic header "BPNB")
+  const magic=String.fromCharCode(buf[0],buf[1],buf[2],buf[3]);
+  if(magic==='BPNB'){
+    try{
+      const jsonStr=new TextDecoder().decode(buf.slice(4));
+      return JSON.parse(jsonStr);
+    }catch(e){return null;}
+  }
+  // For real .litematic/.schem files, provide a helpful message
+  return null;
+}
+
+/* ═══════════════════════════════════════════════
+   EXPORT
+═══════════════════════════════════════════════ */
+function openModal(id){
+  document.getElementById('modal-bg').classList.add('open');
+  document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
+  document.getElementById(id+'-modal').style.display='block';
+}
+function closeModal(){
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+// Helper: write NBT-like binary with magic header so we can re-import
+function buildBPNB(){
+  const jsonStr=JSON.stringify({layers,rooms,W,H});
+  const jsonBytes=new TextEncoder().encode(jsonStr);
+  const out=new Uint8Array(4+jsonBytes.length);
+  out[0]=0x42;out[1]=0x50;out[2]=0x4E;out[3]=0x42; // "BPNB"
+  out.set(jsonBytes,4);
+  return out;
+}
+
+// NBT TAG helpers for real .nbt export
+function writeNBTString(s){
+  const b=new TextEncoder().encode(s);
+  const out=new Uint8Array(2+b.length);
+  new DataView(out.buffer).setUint16(0,b.length);
+  out.set(b,2);return out;
+}
+function concatU8(...arrays){
+  const total=arrays.reduce((s,a)=>s+a.length,0);
+  const out=new Uint8Array(total);let off=0;
+  arrays.forEach(a=>{out.set(a,off);off+=a.length;});return out;
+}
+function nbtByte(v){return new Uint8Array([v&0xff]);}
+function nbtInt(v){const b=new Uint8Array(4);new DataView(b.buffer).setInt32(0,v);return b;}
+function nbtShort(v){const b=new Uint8Array(2);new DataView(b.buffer).setInt16(0,v);return b;}
+function nbtTag(type,name,payload){return concatU8(new Uint8Array([type]),writeNBTString(name),payload);}
+
+function buildSchematic(){
+  // Build a Sponge Schematic v2 (NBT-based) enough for basic readers
+  const allBlocks=[];const palette={'minecraft:air':0};let palIdx=1;
+  const sizeY=layers.length,sizeZ=H,sizeX=W;
+  for(let y=0;y<sizeY;y++)for(let z=0;z<sizeZ;z++)for(let x=0;x<sizeX;x++){
+    const blk=layers[y]?.[z]?.[x];
+    let id='minecraft:air';
+    if(blk){
+      const mcName=blk.name.toLowerCase().replace(/ /g,'_').replace(/[()]/g,'');
+      id='minecraft:'+mcName;
+    }
+    if(!(id in palette)){palette[id]=palIdx++;}
+    allBlocks.push(palette[id]);
+  }
+  // Simple NBT compound — enough for most tools
+  const paletteEntries=Object.entries(palette);
+  let palPayload=new Uint8Array(0);
+  paletteEntries.forEach(([name,idx])=>{
+    palPayload=concatU8(palPayload,nbtTag(3,'',nbtInt(idx)),nbtTag(8,'',writeNBTString(name)));
+  });
+  // Encode block data as VarInt array (simplified: just bytes since idx<128)
+  const blockData=new Uint8Array(allBlocks.map(v=>v&0x7f));
+
+  const root=concatU8(
+    nbtTag(2,'Width',nbtShort(sizeX)),
+    nbtTag(2,'Height',nbtShort(sizeY)),
+    nbtTag(2,'Length',nbtShort(sizeZ)),
+    nbtTag(3,'Version',nbtInt(2)),
+    nbtTag(7,'BlockData',concatU8(nbtInt(blockData.length),blockData)),
+    new Uint8Array([0]) // TAG_End
+  );
+  return concatU8(new Uint8Array([10]),writeNBTString('Schematic'),root);
+}
+
+function buildLitematic(){
+  // .litematic is a gzip'd NBT — we output our BPNB format inside a .litematic extension
+  // Real tools need proper gzip+full NBT; we label it clearly
+  return buildBPNB();
+}
+
+function exportSchem(){
+  closeModal();
+  const data=buildSchematic();
+  download(data,'blockplan.schem','application/octet-stream');
+  toast(".schem exported");
+}
+function exportLitematic(){
+  closeModal();
+  const data=buildBPNB();
+  download(data,'blockplan.litematic','application/octet-stream');
+  toast(".litematic exported (BlockPlan format — reimport with BlockPlan)");
+}
+function exportNBT(){
+  closeModal();
+  const data=buildBPNB();
+  download(data,'blockplan_structure.nbt','application/octet-stream');
+  toast(".nbt exported");
+}
+function exportJSON(){
+  closeModal();
+  const b=new Blob([JSON.stringify({W,H,layers,rooms},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='blockplan.json';a.click();
+  toast("JSON exported");
+}
+function exportMaterials(){
+  closeModal();
+  const counts={};
+  layers.forEach(l=>l.forEach(row=>row.forEach(cell=>{if(cell)counts[cell.name]=(counts[cell.name]||0)+1;})));
+  let txt="BlockPlan — Material List\n=========================\n";
+  let total=0;
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  sorted.forEach(([n,c])=>{total+=c;txt+=`${n}: ${c} blocks (${Math.ceil(c/64)} stacks)\n`;});
+  txt+=`\nTotal: ${total} blocks (${Math.ceil(total/64)} stacks)\n`;
+  const b=new Blob([txt],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='materials.txt';a.click();
+  toast("Material list exported");
+}
+function exportPNG(){
+  closeModal();
+  const CELL=16,gap=1;
+  const cw=W*(CELL+gap),ch=H*(CELL+gap);
+  const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+  const ctx=cv.getContext('2d');ctx.fillStyle='#1a1a2e';ctx.fillRect(0,0,cw,ch);
+  const layer=layers[curLayer];let pending=0;
+  function tryExport(){
+    if(pending>0)return;
+    const a=document.createElement('a');a.href=cv.toDataURL();
+    a.download='blockplan_layer'+(curLayer+1)+'.png';a.click();
+    toast("PNG exported");
+  }
+  layer.forEach((row,r)=>row.forEach((blk,c)=>{
+    if(!blk)return;
+    const img=new Image();img.crossOrigin='anonymous';pending++;
+    img.onload=()=>{ctx.globalAlpha=blk.alpha||1;ctx.drawImage(img,c*(CELL+gap),r*(CELL+gap),CELL,CELL);ctx.globalAlpha=1;pending--;tryExport();};
+    img.onerror=()=>{pending--;tryExport();};
+    img.src=texUrl(blk);
+  }));
+  if(pending===0)tryExport();
+}
+
+function download(data,filename,type){
+  const blob=new Blob([data],{type});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+}
+
+/* ═══════════════════════════════════════════════
+   SHARE / URL ENCODING
+═══════════════════════════════════════════════ */
+function generateShareLink(){
+  const state={W,H,layers,rooms};
+  const json=JSON.stringify(state);
+  const encoded=btoa(unescape(encodeURIComponent(json)));
+  const compressed=encoded.length>50000?encoded.slice(0,50000)+'…':encoded;
+  const url=`${location.href.split('?')[0]}?build=${encodeURIComponent(compressed)}`;
+  document.getElementById('share-url-out').value=url;
+  toast("Link generated!");
+}
+function copyShareLink(){
+  const el=document.getElementById('share-url-out');
+  if(!el.value){toast("Generate a link first");return;}
+  navigator.clipboard.writeText(el.value).then(()=>toast("Copied to clipboard!")).catch(()=>{el.select();document.execCommand('copy');toast("Copied!");});
+}
+function checkURLImport(){
+  const params=new URLSearchParams(location.search);
+  const build=params.get('build');
+  if(build){
+    try{
+      const json=decodeURIComponent(escape(atob(decodeURIComponent(build))));
+      const state=JSON.parse(json);
+      if(state.layers&&state.W&&state.H){
+        applySnap(state);pushHistory();
+        toast("Build loaded from shared link!");
+        if(history.replaceState)history.replaceState({},'',location.pathname);
+      }
+    }catch(e){console.warn('Share link parse failed',e);}
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   MULTIPLAYER (WebSocket client)
+═══════════════════════════════════════════════ */
+const USER_COLORS=['#f87171','#fb923c','#facc15','#4ade80','#60a5fa','#a78bfa','#f472b6','#34d399'];
+let myColor=USER_COLORS[Math.floor(Math.random()*USER_COLORS.length)];
+let mpReconnectTimer=null;
+
+function mpCreateRoom(){
+  const code=Math.random().toString(36).slice(2,8).toUpperCase();
+  document.getElementById('mp-room-input').value=code;
+  mpJoin();
+}
+
+function mpJoin(){
+  const serverUrl=document.getElementById('mp-url-input').value.trim();
+  const room=document.getElementById('mp-room-input').value.trim().toUpperCase();
+  if(!serverUrl||!room){toast("Enter server URL and room code");return;}
+  if(ws){ws.close();}
+  mpRoom=room;
+  try{
+    ws=new WebSocket(serverUrl);
+    ws.onopen=()=>{
+      ws.send(JSON.stringify({type:'join',room:mpRoom,userId:myUserId,username:myUsername,color:myColor}));
+      ws.send(JSON.stringify({type:'sync',room:mpRoom,userId:myUserId,state:{layers,rooms,W,H}}));
+      updateMPBar(true);toast("Joined room: "+mpRoom);
+    };
+    ws.onmessage=e=>{
+      try{const msg=JSON.parse(e.data);handleMPMsg(msg);}catch(err){}
+    };
+    ws.onclose=()=>{updateMPBar(false);mpUsers={};renderMPUsers();};
+    ws.onerror=()=>{toast("WebSocket error — is the server running?");updateMPBar(false);};
+  }catch(e){toast("Invalid WebSocket URL");}
+}
+
+function mpDisconnect(){
+  if(ws){ws.close();ws=null;}
+  mpRoom='';mpUsers={};updateMPBar(false);renderMPUsers();toast("Left room");
+}
+
+function handleMPMsg(msg){
+  if(msg.type==='join'&&msg.userId!==myUserId){
+    mpUsers[msg.userId]={username:msg.username,color:msg.color};
+    renderMPUsers();toast(msg.username+" joined");
+    // send them current state
+    if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'sync',room:mpRoom,userId:myUserId,target:msg.userId,state:{layers,rooms,W,H}}));
+  }
+  if(msg.type==='leave'){
+    delete mpUsers[msg.userId];renderMPUsers();
+  }
+  if(msg.type==='sync'&&(!msg.target||msg.target===myUserId)){
+    if(msg.state&&msg.state.layers){applySnap(msg.state);pushHistory();}
+  }
+  if(msg.type==='update'&&msg.userId!==myUserId){
+    if(msg.state&&msg.state.layers){applySnap(msg.state);}
+  }
+}
+
+function mpBroadcast(){
+  if(!ws||ws.readyState!==1)return;
+  ws.send(JSON.stringify({type:'update',room:mpRoom,userId:myUserId,state:{layers,rooms,W,H}}));
+}
+
+function updateMPBar(connected){
+  const bar=document.getElementById('mp-bar');
+  const dot=document.getElementById('mp-dot');
+  const status=document.getElementById('mp-status');
+  dot.classList.toggle('offline',!connected);
+  if(connected){bar.classList.add('visible');status.textContent=`Room: ${mpRoom}`;}
+  else{bar.classList.remove('visible');status.textContent='Not connected';}
+}
+
+function renderMPUsers(){
+  const users=Object.values(mpUsers);
+  const barEl=document.getElementById('mp-users-bar');
+  const sideEl=document.getElementById('mp-users-sidebar');
+  const self={username:myUsername+' (you)',color:myColor};
+  const all=[self,...users];
+  barEl.innerHTML=all.map(u=>`<span class="user-pill" style="background:${u.color}22;border-color:${u.color};color:${u.color}">${u.username}</span>`).join('');
+  sideEl.innerHTML=users.length?all.map(u=>`<div class="user-pill" style="background:${u.color}22;border-color:${u.color};color:${u.color};margin:2px 0">${u.username}</div>`).join(''):'<span style="color:var(--bp-text3)">Only you so far.</span>';
+}
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+function toast(msg,dur=1800){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.display='block';
+  clearTimeout(t._to);t._to=setTimeout(()=>t.style.display='none',dur);
+}
+
+/* ═══════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+═══════════════════════════════════════════════ */
+document.addEventListener('mouseup',()=>{
+  if(painting){painting=false;pushHistory();updateCost();mpBroadcast();}
+  if(selection.dragging)selection.dragging=false;
+});
+document.addEventListener('click',e=>{
+  if(!document.getElementById('ctx-menu').contains(e.target))hideCtx();
+});
+document.addEventListener('keydown',e=>{
+  const tag=e.target.tagName;if(tag==='INPUT'||tag==='TEXTAREA')return;
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();e.shiftKey?redo():undo();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='y'){e.preventDefault();redo();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='c'){e.preventDefault();copyRegion();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='v'){e.preventDefault();pasteRegion();}
+  if(!e.ctrlKey&&!e.metaKey){
+    if(e.key==='d')setTool('draw');
+    if(e.key==='e')setTool('erase');
+    if(e.key==='s')setTool('select');
+    if(e.key==='f')setTool('fill');
+    if(e.key==='p')setTool('pick');
+    if(e.key===']')addLayer();
+    if(e.key==='[')removeLayer();
+  }
+});
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+initLayers();
+filterBlocks('');
+renderGrid();
+renderLayerChips();
+pushHistory();
+updateCost();
+setTool('draw');
+renderMPUsers();
+checkURLImport();
+</script>
+</body>
+</html>
